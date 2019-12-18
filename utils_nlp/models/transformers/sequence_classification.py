@@ -286,10 +286,7 @@ class SequenceClassifier(Transformer):
         """
 
         device, num_gpus = get_device(num_gpus=num_gpus, local_rank=local_rank)
-        if isinstance(self.model, nn.DataParallel):
-            self.model.module.to(device)
-        else:
-            self.model.to(device)
+        self.model.to(device)
 
         super().fine_tune(
             train_dataloader=train_dataloader,
@@ -320,10 +317,7 @@ class SequenceClassifier(Transformer):
             1darray: numpy array of predicted label indices.
         """
         device, num_gpus = get_device(num_gpus=num_gpus, local_rank=-1)
-        if isinstance(self.model, nn.DataParallel):
-            self.model.module.to(device)
-        else:
-            self.model.to(device)
+        self.model.to(device)
 
         preds = list(
             super().predict(
