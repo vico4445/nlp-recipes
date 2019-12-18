@@ -169,7 +169,7 @@ class Transformer:
                 train_dataloader, desc="Iteration", disable=local_rank not in [-1, 0] or not verbose
             )
             for step, batch in enumerate(epoch_iterator):
-                
+
                 batch = tuple(t.to(device) for t in batch)
                 inputs = get_inputs(batch, self.model_name)
                 outputs = self.model(**inputs)

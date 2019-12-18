@@ -3,7 +3,6 @@
 
 import numpy as np
 import torch
-import torch.nn as nn
 from torch.utils.data import DataLoader, RandomSampler, SequentialSampler
 from torch.utils.data.distributed import DistributedSampler
 
@@ -312,7 +311,7 @@ class SequenceClassifier(Transformer):
                 be used. If set to 0 or GPUs are not available, CPU device will be used.
                 Defaults to None.
             verbose (bool, optional): Whether to print out the training log. Defaults to True.
-        
+
         Returns
             1darray: numpy array of predicted label indices.
         """
