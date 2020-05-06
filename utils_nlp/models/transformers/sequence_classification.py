@@ -22,6 +22,15 @@ from transformers.modeling_xlnet import (
     XLNET_PRETRAINED_MODEL_ARCHIVE_MAP,
     XLNetForSequenceClassification,
 )
+from transformers.modeling_camembert import (
+    CAMEMBERT_PRETRAINED_MODEL_ARCHIVE_MAP,
+    CamembertForSequenceClassification,
+)
+from transformers.modeling_flaubert import (
+    FLAUBERT_PRETRAINED_MODEL_ARCHIVE_MAP,
+    FlaubertForSequenceClassification,
+)
+
 
 from utils_nlp.common.pytorch_utils import compute_training_steps
 from utils_nlp.models.transformers.common import (
@@ -49,6 +58,12 @@ MODEL_CLASS.update(
 )
 MODEL_CLASS.update(
     {k: AlbertForSequenceClassification for k in ALBERT_PRETRAINED_MODEL_ARCHIVE_MAP}
+)
+MODEL_CLASS.update(
+    {k: CamembertForSequenceClassification for k in CAMEMBERT_PRETRAINED_MODEL_ARCHIVE_MAP}
+)
+MODEL_CLASS.update(
+    {k: FlaubertForSequenceClassification for k in FLAUBERT_PRETRAINED_MODEL_ARCHIVE_MAP}
 )
 
 
@@ -99,6 +114,8 @@ class Processor:
             "roberta",
             "distilbert",
             "albert",
+            "camembert",
+            "flaubert"
         ]:
             if train_mode:
                 inputs = {
@@ -243,12 +260,13 @@ class Processor:
 
 
 class SequenceClassifier(Transformer):
-    def __init__(self, model_name="bert-base-cased", num_labels=2, cache_dir="."):
+    def __init__(self, model_name="bert-base-cased", num_labels=2, cache_dir=".", load_model_from_dir=None):
         super().__init__(
             model_class=MODEL_CLASS,
             model_name=model_name,
             num_labels=num_labels,
             cache_dir=cache_dir,
+            load_model_from_dir=load_model_from_dir
         )
 
     @staticmethod
@@ -273,6 +291,7 @@ class SequenceClassifier(Transformer):
         checkpoint_state_dict=None,
         verbose=True,
         seed=None,
+        save_every=-1
     ):
         """
         Fine-tunes a pre-trained sequence classification model.
@@ -363,6 +382,7 @@ class SequenceClassifier(Transformer):
             local_rank=local_rank,
             verbose=verbose,
             seed=seed,
+            save_every=save_every
         )
 
     def predict(self, test_dataloader, num_gpus=None, gpu_ids=None, verbose=True):
