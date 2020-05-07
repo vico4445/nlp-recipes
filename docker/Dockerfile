@@ -21,12 +21,12 @@ RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda2-4.5.11-Linux-x86
 # Get the latest version repository
 WORKDIR /root
 RUN apt-get install -y zip && \
-    wget --quiet https://github.com/microsoft/nlp-recipes/archive/staging.zip -O staging.zip && \
-    unzip staging.zip  && rm staging.zip 
+    wget --quiet https://github.com/vico4445/nlp-recipes/archive/master.zip -O master.zip && \
+    unzip master.zip  && rm master.zip
     
 # Install the packages
-WORKDIR /root/nlp-recipes-staging
-RUN python /root/nlp-recipes-staging/tools/generate_conda_file.py --gpu && \
+WORKDIR /root/nlp-recipes-master
+RUN python /root/nlp-recipes-master/tools/generate_conda_file.py --gpu && \
     conda env create -n nlp_gpu -f nlp_gpu.yaml 
 RUN source activate nlp_gpu && \
     pip install -e . && \
@@ -34,6 +34,6 @@ RUN source activate nlp_gpu && \
 
 # Run notebook
 EXPOSE 8888/tcp
-WORKDIR /root/nlp-recipes-staging
+WORKDIR /root/nlp-recipes-master
 CMD source activate nlp_gpu && \
-    jupyter notebook --allow-root --ip 0.0.0.0 --port 8888 --no-browser --notebook-dir .
+    jupyter notebook --allow-root --ip 0.0.0.0 --port 8888 --no-browser --NotebookApp.token= --notebook-dir='/root'
