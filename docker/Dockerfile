@@ -27,7 +27,7 @@ RUN apt-get install -y zip && \
 # Install the packages
 WORKDIR /root/nlp-recipes-master
 RUN python /root/nlp-recipes-master/tools/generate_conda_file.py --gpu && \
-    conda env create -n nlp_gpu -f nlp_gpu.yaml 
+    conda env create -n nlp_gpu -f nlp_gpu.yaml
 RUN source activate nlp_gpu && \
     pip install -e . && \
     python -m ipykernel install --user --name nlp_gpu --display-name "Python (nlp_gpu)"

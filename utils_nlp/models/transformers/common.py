@@ -18,10 +18,14 @@ from transformers.modeling_bert import BERT_PRETRAINED_MODEL_ARCHIVE_MAP
 from transformers.modeling_distilbert import DISTILBERT_PRETRAINED_MODEL_ARCHIVE_MAP
 from transformers.modeling_roberta import ROBERTA_PRETRAINED_MODEL_ARCHIVE_MAP
 from transformers.modeling_xlnet import XLNET_PRETRAINED_MODEL_ARCHIVE_MAP
+from transformers.modeling_camembert import CAMEMBERT_PRETRAINED_MODEL_ARCHIVE_MAP
+from transformers.modeling_flaubert import FLAUBERT_PRETRAINED_MODEL_ARCHIVE_MAP
 from transformers.tokenization_bert import BertTokenizer
 from transformers.tokenization_distilbert import DistilBertTokenizer
 from transformers.tokenization_roberta import RobertaTokenizer
 from transformers.tokenization_xlnet import XLNetTokenizer
+from transformers.tokenization_camembert import CamembertTokenizer
+from transformers.tokenization_flaubert import FlaubertTokenizer
 
 from utils_nlp.common.pytorch_utils import (
     get_device,
@@ -39,6 +43,8 @@ TOKENIZER_CLASS.update({k: XLNetTokenizer for k in XLNET_PRETRAINED_MODEL_ARCHIV
 TOKENIZER_CLASS.update(
     {k: DistilBertTokenizer for k in DISTILBERT_PRETRAINED_MODEL_ARCHIVE_MAP}
 )
+TOKENIZER_CLASS.update({k: CamembertTokenizer for k in CAMEMBERT_PRETRAINED_MODEL_ARCHIVE_MAP})
+TOKENIZER_CLASS.update({k: FlaubertTokenizer for k in FLAUBERT_PRETRAINED_MODEL_ARCHIVE_MAP})
 
 MAX_SEQ_LEN = 512
 
