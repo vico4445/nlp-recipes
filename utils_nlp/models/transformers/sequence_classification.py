@@ -291,7 +291,10 @@ class SequenceClassifier(Transformer):
         checkpoint_state_dict=None,
         verbose=True,
         seed=None,
-        save_every=-1
+        save_every=-1,
+        eval_dataloader=None,
+        patience=20,
+        save_model_dir=None
     ):
         """
         Fine-tunes a pre-trained sequence classification model.
@@ -368,7 +371,7 @@ class SequenceClassifier(Transformer):
         )
 
         # fine tune
-        super().fine_tune(
+        return super().fine_tune(
             train_dataloader=train_dataloader,
             get_inputs=Processor.get_inputs,
             device=device,
@@ -382,7 +385,10 @@ class SequenceClassifier(Transformer):
             local_rank=local_rank,
             verbose=verbose,
             seed=seed,
-            save_every=save_every
+            save_every=save_every,
+            eval_dataloader=eval_dataloader,
+            patience=patience,
+            save_model_dir=save_model_dir
         )
 
     def predict(self, test_dataloader, num_gpus=None, gpu_ids=None, verbose=True):

@@ -219,6 +219,9 @@ class Transformer:
         save_every=-1,
         clip_grad_norm=True,
         validation_function=None,
+        eval_dataloader=None,
+        patience=20,
+        save_model_dir=None
     ):
 
         if seed is not None:
@@ -228,13 +231,29 @@ class Transformer:
         tr_loss = 0.0
         accum_loss = 0
         train_size = 0
-        self.model.train()
-        self.model.zero_grad()
+        # self.model.train()
+        # self.model.zero_grad()
+        # to track the training loss as the model trains
+        train_losses = []
+        # to track the validation loss as the model trains
+        valid_losses = []
+        # to track the average training loss per epoch as the model trains
+        avg_train_losses = []
+        # to track the average validation loss per epoch as the model trains
+        avg_valid_losses = []
+        # initialize the early_stopping object
+        early_stopping = EarlyStopping(patience=patience, verbose=True)
 
         # train
         start = time.time()
         # TODO: Is this while necessary???
         while global_step < max_steps:
+            ###################
+            # train the model #
+            ###################
+            self.model.train()
+            self.model.zero_grad()
+
             epoch_iterator = tqdm(
                 train_dataloader,
                 desc="Iteration",
@@ -265,8 +284,11 @@ class Transformer:
                 tr_loss += loss.item()
                 accum_loss += loss.item()
                 train_size += list(inputs.values())[0].size()[0]
-                if (step + 1) % gradient_accumulation_steps == 0:
 
+                # record training loss
+                train_losses.append(loss.item())
+
+                if (step + 1) % gradient_accumulation_steps == 0:
                     global_step += 1
 
                     if clip_grad_norm:
@@ -296,7 +318,7 @@ class Transformer:
                             max_steps,
                         )
                         logger.info(log_line)
-                        print(log_line)
+
                         accum_loss = 0
                         train_size = 0
                         start = end
@@ -323,14 +345,55 @@ class Transformer:
                         saved_model_path = os.path.join(
                             self.cache_dir, f"{self.model_name}_step_{global_step}.pt"
                         )
-                        self.save_model(global_step, saved_model_path)
+                        # self.save_model(saved_model_path)
                         if validation_function:
                             validation_log = validation_function(self)
                             logger.info(validation_log)
-                            print(validation_log)
                 if global_step > max_steps:
                     epoch_iterator.close()
                     break
+
+            ######################
+            # validate the model #
+            ######################
+            if eval_dataloader is not None:
+                self.model.eval()  # prep model for evaluation
+                for batch in tqdm(eval_dataloader, desc="Scoring", disable=not verbose):
+                    with torch.no_grad():
+                        inputs = get_inputs(batch, device, self.model_name)  # Leave in train mode = Labels --> Loss
+                        outputs = self.model(**inputs)
+                        loss = outputs[0]
+
+                        # record validation loss
+                        valid_losses.append(loss.item())
+
+            # print training/validation statistics
+            # calculate average loss over an epoch
+            train_loss = np.average(train_losses)
+            valid_loss = np.average(valid_losses)
+            avg_train_losses.append(train_loss)
+            avg_valid_losses.append(valid_loss)
+
+            logger.info(f'[{global_step:}] ' +
+                        f'train_loss: {train_loss:.5f} ' +
+                        f'valid_loss: {valid_loss:.5f}')
+
+            # clear lists to track next epoch
+            train_losses = []
+            valid_losses = []
+
+            if eval_dataloader is not None:
+                # early_stopping needs the validation loss to check if it has decresed,
+                # and if it has, it will make a checkpoint of the current model
+                early_stopping(valid_loss, self.model.module, save_model_dir)
+
+                if early_stopping.early_stop:
+                    logger.info("Early stopping")
+                    break
+
+        # load the last checkpoint with the best model
+        # self.model.load_state_dict(torch.load('checkpoint.pt'))
+
         if fp16 and amp:
             self.amp_state_dict = amp.state_dict()
         
@@ -338,7 +401,7 @@ class Transformer:
         self.model.cpu()
         torch.cuda.empty_cache()
 
-        return global_step, tr_loss / global_step
+        return global_step, tr_loss / global_step, avg_train_losses, avg_valid_losses
 
     def predict(self, eval_dataloader, get_inputs, num_gpus, gpu_ids, verbose=True):
         # get device
@@ -395,3 +458,51 @@ class Transformer:
 
             logger.info("Saving model checkpoint to %s", output_model_dir)
             model_to_save.save_pretrained(output_model_dir)
+
+
+class EarlyStopping:
+    """Early stops the training if validation loss doesn't improve after a given patience."""
+    def __init__(self, patience=7, verbose=False, delta=0):
+        """
+        Args:
+            patience (int): How long to wait after last time validation loss improved.
+                            Default: 7
+            verbose (bool): If True, prints a message for each validation loss improvement.
+                            Default: False
+            delta (float): Minimum change in the monitored quantity to qualify as an improvement.
+                            Default: 0
+        """
+        self.patience = patience
+        self.verbose = verbose
+        self.counter = 0
+        self.best_score = None
+        self.early_stop = False
+        self.val_loss_min = np.Inf
+        self.delta = delta
+
+    def __call__(self, val_loss, model, dir_):
+
+        score = -val_loss
+
+        if self.best_score is None:
+            self.best_score = score
+            self.save_checkpoint(val_loss, model, dir_)
+        elif score < self.best_score + self.delta:
+            self.counter += 1
+            logger.info(f'EarlyStopping counter: {self.counter} out of {self.patience}')
+            if self.counter >= self.patience:
+                self.early_stop = True
+        else:
+            self.best_score = score
+            self.save_checkpoint(val_loss, model, dir_)
+            self.counter = 0
+
+    def save_checkpoint(self, val_loss, model, dir_):
+        '''Saves model when validation loss decrease.'''
+        if self.verbose:
+            logger.info(f'Validation loss decreased ({self.val_loss_min:.6f} --> {val_loss:.6f}).  Saving model {dir_} ...')
+        # torch.save(model.module.state_dict(), 'checkpoint.pt')
+        if not os.path.exists(dir_):
+            os.makedirs(dir_)
+        model.save_pretrained(dir_)
+        self.val_loss_min = val_loss
