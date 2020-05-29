@@ -421,4 +421,4 @@ class SequenceClassifier(Transformer):
             )
         )
         preds = np.concatenate(preds)
-        return np.argmax(preds, axis=1)
+        return np.argmax(preds, axis=1), np.max(preds, axis=1)
