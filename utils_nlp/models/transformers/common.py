@@ -47,7 +47,7 @@ TOKENIZER_CLASS.update({k: CamembertTokenizer for k in CAMEMBERT_PRETRAINED_MODE
 TOKENIZER_CLASS.update({k: FlaubertTokenizer for k in FLAUBERT_PRETRAINED_MODEL_ARCHIVE_MAP})
 
 MAX_SEQ_LEN = 512
-
+Loading cached model from {}"
 logger = logging.getLogger(__name__)
 
 
@@ -385,7 +385,7 @@ class Transformer:
             if eval_dataloader is not None:
                 # early_stopping needs the validation loss to check if it has decresed,
                 # and if it has, it will make a checkpoint of the current model
-                early_stopping(valid_loss, self.model.module, save_model_dir)
+                early_stopping(valid_loss, self.model.module if hasattr(self.model, "module") else self.model, save_model_dir)
 
                 if early_stopping.early_stop:
                     logger.info("Early stopping")
